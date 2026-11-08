@@ -95,4 +95,49 @@ describe("compareWithBaseline", () => {
       );
     });
   });
+
+  describe("AskUserQuestion companion marker", () => {
+    const marker = {
+      "_claude/askUserQuestionCustomAnswer": { questionId: "question_0", withSelection: "note" },
+    };
+    const elicitation = (custom: Record<string, unknown>): Recorded => ({
+      kind: "createElicitation",
+      payload: {
+        sessionId: "s",
+        mode: "form",
+        message: "Which database?",
+        requestedSchema: {
+          type: "object",
+          properties: {
+            question_0: { type: "string", oneOf: [{ const: "Postgres", title: "Postgres" }] },
+            question_0_custom: { type: "string", title: "Other", ...custom },
+          },
+        },
+      },
+    });
+
+    it("accepts a custom answer field that gains only the marker", () => {
+      expect(compareWithBaseline([elicitation({})], [elicitation({ _meta: marker })])).toEqual([]);
+    });
+
+    it("reports another _meta key next to the marker", () => {
+      const current = elicitation({ _meta: { ...marker, other: true } });
+      expect(compareWithBaseline([elicitation({})], [current])).toContainEqual(
+        expect.stringMatching(/but the adapter sent .*"other":true/u),
+      );
+    });
+
+    it("reports the marker on a record that is not an elicitation", () => {
+      const call = {
+        sessionUpdate: "tool_call",
+        toolCallId: "t",
+        title: "Read",
+        status: "pending",
+      };
+      const marked = update({ ...call, _meta: marker });
+      expect(compareWithBaseline([update(call)], [marked])).toContainEqual(
+        expect.stringMatching(/but the adapter sent .*"_claude\/askUserQuestionCustomAnswer"/u),
+      );
+    });
+  });
 });

@@ -162,6 +162,15 @@ function questionCustomFieldKey(index: number): string {
 const OPTION_META_KEY = "_claude/askUserQuestionOption";
 
 /**
+ * `_meta` key that marks `question_<n>_custom` as the companion of the select
+ * field `question_<n>`, for every client. The value is
+ * `{ questionId, withSelection }`: `withSelection` is `"note"` for a
+ * single-select question and `"append"` for a multi-select question. See
+ * `docs/ask-user-question.md`.
+ */
+const CUSTOM_ANSWER_META_KEY = "_claude/askUserQuestionCustomAnswer";
+
+/**
  * Render the AskUserQuestion tool's questions as an ACP form elicitation.
  *
  * Fields are keyed by a short stable id (`question_<n>`) rather than the full
@@ -216,6 +225,12 @@ export function askUserQuestionsToCreateRequest(
       ? { type: "array", title, description, items: { anyOf: options } }
       : { type: "string", title, description, oneOf: options };
 
+    const companion = {
+      [CUSTOM_ANSWER_META_KEY]: {
+        questionId: questionFieldKey(index),
+        withSelection: question.multiSelect ? "append" : "note",
+      },
+    };
     const customAnswer = { questionId: questionFieldKey(index), isCustomAnswer: true };
     properties[questionCustomFieldKey(index)] = {
       type: "string",
@@ -223,18 +238,15 @@ export function askUserQuestionsToCreateRequest(
       description: question.multiSelect
         ? "Type your own answer to add to your selection above (optional)."
         : "Type your own answer, or add a note to the option you chose above (optional).",
-      // Marks the field as the custom answer companion of a select question,
-      // under `_meta.jetbrains.air.customAnswer` and under the root key that
-      // released AIR versions read. Only AIR gets the marker.
-      ...(airClient
-        ? {
-            _meta: withAirMeta(
-              { [LEGACY_AIR_CUSTOM_ANSWER_KEY]: customAnswer },
-              AIR_CUSTOM_ANSWER_KEY,
-              customAnswer,
-            ),
-          }
-        : {}),
+      // AIR also gets `_meta.jetbrains.air.customAnswer` and the root key that
+      // released AIR versions read.
+      _meta: airClient
+        ? withAirMeta(
+            { ...companion, [LEGACY_AIR_CUSTOM_ANSWER_KEY]: customAnswer },
+            AIR_CUSTOM_ANSWER_KEY,
+            customAnswer,
+          )
+        : companion,
     };
   });
 

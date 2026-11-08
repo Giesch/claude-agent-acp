@@ -24,6 +24,7 @@ This tool implements an ACP agent by using the official [Claude Agent SDK](https
 - Concrete model and effort defaults through the opt-in [recommended config value extension](docs/air-extensions.md#recommended-config-values)
 - Tool permission presentation, editable choices, and durable effects through the [permission extension](docs/air-extensions.md#permission-presentation)
 - One fact per field in every tool call report, as the [ACP tool call contract](docs/air-extensions.md#tool-call-contract) defines
+- `AskUserQuestion` as an ACP form elicitation, with a per-question custom answer field: [AskUserQuestion form contract](docs/ask-user-question.md)
 - All AIR extensions, capabilities, and `_meta` keys: [AIR extensions](docs/air-extensions.md)
 
 Learn more about the [Agent Client Protocol](https://agentclientprotocol.com/).

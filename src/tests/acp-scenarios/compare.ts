@@ -29,6 +29,9 @@
  *   only its final `status` once its permission request is answered. The
  *   callback runs nothing, so origin/main never settled the call (see
  *   {@link withoutSandboxNetworkSettlements}).
+ * - Each `question_<n>_custom` property of a `createElicitation` form
+ *   carries `_meta["_claude/askUserQuestionCustomAnswer"]`, which origin/main
+ *   sent only to AIR under other keys (see {@link withoutCustomAnswerCompanion}).
  * - A `terminal_exit` has a `null` exit code where origin/main sent a code
  *   that the tool result does not say (see `CommandOutput.exitCode`): 1 for a
  *   failure that names no code or an interrupted command, 0 for a
@@ -242,6 +245,33 @@ function withoutSessionCapability(record: Recorded, key: string): Recorded {
   } as Recorded;
 }
 
+/** The `_meta` key that marks the companion of an AskUserQuestion select field. */
+const CUSTOM_ANSWER_META_KEY = "_claude/askUserQuestionCustomAnswer";
+
+/** `record` without {@link CUSTOM_ANSWER_META_KEY} on its form properties. */
+function withoutCustomAnswerCompanion(record: Recorded): Recorded {
+  if (record.kind !== "createElicitation") return record;
+  const payload = record.payload as Json;
+  const schema = payload.requestedSchema as Json | undefined;
+  const properties = schema?.properties as Record<string, Json> | undefined;
+  if (!properties) return record;
+  const stripped = Object.fromEntries(
+    Object.entries(properties).map(([name, property]) => {
+      const meta = property._meta as Json | undefined;
+      if (!meta || !(CUSTOM_ANSWER_META_KEY in meta)) return [name, property];
+      const rest = without(meta, CUSTOM_ANSWER_META_KEY);
+      return [
+        name,
+        Object.keys(rest).length > 0 ? { ...property, _meta: rest } : without(property, "_meta"),
+      ];
+    }),
+  );
+  return {
+    ...record,
+    payload: { ...payload, requestedSchema: { ...schema, properties: stripped } },
+  } as Recorded;
+}
+
 /**
  * Returns the differences between the baseline and the current traffic that
  * the compatibility rule does not allow. An empty list means compatible.
@@ -254,7 +284,9 @@ export function compareWithBaseline(baseline: Recorded[], traffic: Recorded[]): 
       return !(update?.sessionUpdate === "session_info_update" && Object.keys(update).length === 1);
     });
   const current = withoutSandboxNetworkSettlements(
-    traffic.map((record) => withoutSessionCapability(record, "systemPrompt")),
+    traffic.map((record) =>
+      withoutCustomAnswerCompanion(withoutSessionCapability(record, "systemPrompt")),
+    ),
   );
   const violations: string[] = [];
   const state = new Map<string, Map<string, string>>();

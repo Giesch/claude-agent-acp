@@ -303,6 +303,10 @@ describe("askUserQuestionsToCreateRequest", () => {
       type: "string",
       title: "Other",
       _meta: {
+        "_claude/askUserQuestionCustomAnswer": {
+          questionId: "question_0",
+          withSelection: "note",
+        },
         _askUserQuestionCustomAnswer: { questionId: "question_0", isCustomAnswer: true },
         jetbrains: {
           air: { customAnswer: { questionId: "question_0", isCustomAnswer: true } },
@@ -320,14 +324,36 @@ describe("askUserQuestionsToCreateRequest", () => {
       },
     });
 
-    // A client that is not AIR gets the field without the AIR marker.
+    // A client that is not AIR gets only the `_claude/` companion marker.
     const plain = (
       askUserQuestionsToCreateRequest(questions, SESSION_ID, undefined) as Extract<
         CreateElicitationRequest,
         { mode: "form" }
       >
     ).requestedSchema;
-    expect(plain.properties?.["question_0_custom"]).not.toHaveProperty("_meta");
+    expect(plain.properties?.["question_0_custom"]).toHaveProperty("_meta", {
+      "_claude/askUserQuestionCustomAnswer": { questionId: "question_0", withSelection: "note" },
+    });
+  });
+
+  it("marks a multi-select question's custom-answer field as appended to the selection", () => {
+    const questions = [
+      mkQuestion("Pick one?", [{ label: "A" }, { label: "B" }]),
+      mkQuestion("Pick many?", [{ label: "X" }, { label: "Y" }], { multiSelect: true }),
+    ];
+    const schema = (
+      askUserQuestionsToCreateRequest(questions, SESSION_ID, undefined) as Extract<
+        CreateElicitationRequest,
+        { mode: "form" }
+      >
+    ).requestedSchema;
+
+    expect(schema.properties?.["question_0_custom"]).toHaveProperty("_meta", {
+      "_claude/askUserQuestionCustomAnswer": { questionId: "question_0", withSelection: "note" },
+    });
+    expect(schema.properties?.["question_1_custom"]).toHaveProperty("_meta", {
+      "_claude/askUserQuestionCustomAnswer": { questionId: "question_1", withSelection: "append" },
+    });
   });
 
   it("builds an array property for multi-select questions and includes per-field question text", () => {

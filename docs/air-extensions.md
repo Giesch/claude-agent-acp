@@ -1714,6 +1714,7 @@ A client can render the companion as the free-text choice of that question.
 For AIR, the companion field also carries the same value under the root key `_meta._askUserQuestionCustomAnswer`.
 Released AIR versions read only that key.
 A client that is not AIR gets neither key.
+Every client gets `_meta["_claude/askUserQuestionCustomAnswer"]`, which [AskUserQuestion form contract](ask-user-question.md) describes.
 
 ## Load replay end
 

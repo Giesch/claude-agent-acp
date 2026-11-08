@@ -662,6 +662,7 @@ describe.skipIf(baselineDir)("ACP scenarios", () => {
         (record) => record.kind === "createElicitation",
       )!.payload as Record<string, any>;
       expect(elicitation.requestedSchema.properties.question_0_custom._meta).toEqual({
+        "_claude/askUserQuestionCustomAnswer": { questionId: "question_0", withSelection: "note" },
         _askUserQuestionCustomAnswer: { questionId: "question_0", isCustomAnswer: true },
         jetbrains: {
           air: { version: 1, customAnswer: { questionId: "question_0", isCustomAnswer: true } },
